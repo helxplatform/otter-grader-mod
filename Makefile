@@ -28,6 +28,9 @@ htmlcov: testcov
 docs:
 	$(MAKE) -C docs html
 
+image.build:
+	docker buildx build --platform=linux/amd64 -t temp-build .
+
 docker-test-prepare: 
 	cp -r Dockerfile test-Dockerfile
 	printf "\nADD . /home/otter-grader\nRUN pip install /home/otter-grader" >> test-Dockerfile
