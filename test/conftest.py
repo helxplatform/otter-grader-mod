@@ -108,7 +108,8 @@ def add_repo_dir_to_context_then_build(*args, **kwargs):
 
 @pytest.fixture(autouse=True)
 def patch_docker_build():
-    with mock.patch("otter.grade.containers.docker.build", wraps=add_repo_dir_to_context_then_build):
+    with mock.patch("otter.grade.runtimes.docker.docker.build",
+                    wraps=add_repo_dir_to_context_then_build):
         yield
 
 

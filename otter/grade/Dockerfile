@@ -13,6 +13,9 @@ RUN mkdir -p /autograder/source && \
     mkdir -p /autograder/results
 
 ENV BASE_IMAGE=$BASE_IMAGE
+ARG ENV_FILE_HASH
+LABEL environment_file_hash="$ENV_FILE_HASH"
+
 ADD run_autograder /autograder/run_autograder
 ADD setup.sh environment.yml requirements.* /autograder/source/
 
@@ -22,6 +25,7 @@ RUN dos2unix /autograder/run_autograder /autograder/source/setup.sh && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+# These should be moved out of the image?
 ADD otter_config.json run_otter.py /autograder/source/
 ADD files* /autograder/source/files/
 ADD tests /autograder/source/tests/

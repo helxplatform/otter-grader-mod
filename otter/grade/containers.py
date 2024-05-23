@@ -10,11 +10,13 @@ import tempfile
 import zipfile
 
 from concurrent.futures import ThreadPoolExecutor, wait
-from python_on_whales import docker
 from textwrap import indent
 from typing import List, Optional
 
+from python_on_whales import docker
+
 from .utils import OTTER_DOCKER_IMAGE_NAME
+from .runtimes import get_runtime
 
 from ..run.run_autograder.autograder_config import AutograderConfig
 from ..utils import loggers, OTTER_CONFIG_FILENAME
@@ -170,31 +172,31 @@ def grade_submission(
         if network is not None and not network:
             args['networks'] = 'none'
 
-        container = docker.container.create(image, command=["/autograder/run_autograder"], **args)
+        # Creates the container
+        runtime_class = get_runtime(
+            os.environ.get('OTTER_GRADE_RUNTIME', 'docker'))
+        runtime = runtime_class(image, command=["/autograder/run_autograder"],
+                                volumes=volumes, no_kill=no_kill)
+        # Launches container
+        runtime.start()
 
-        for local_path, container_path in volumes:
-            docker.container.copy(local_path, (container, container_path))
-
-        docker.container.start(container)
-
+        # Watches for timeout
         if timeout:
             import threading
 
-            def kill_container():
-                docker.container.kill(container)
-
-            timer = threading.Timer(timeout, kill_container)
+            timer = threading.Timer(timeout, runtime.kill())
             timer.start()
 
-        container_id = container.id[:12]
+        container_id = runtime.get_container_id()
         LOGGER.info(f"Grading {submission_path} in container {container_id}...")
 
-        exit = docker.container.wait(container)
+        exit = runtime.wait()
 
         if timeout:
             timer.cancel()
 
-        logs = docker.container.logs(container)
+        # Collects logs
+        logs = runtime.get_logs()
         LOGGER.debug(f"Container {container_id} logs:\n{indent(logs, '    ')}")
 
         # Close our file handles since docker cp will delete the original file when performing the
@@ -204,11 +206,7 @@ def grade_submission(
         if pdf_path:
             os.close(pdf_file)
 
-        for local_path, container_path in volumes:
-            docker.container.copy((container, container_path), local_path)
-
-        if not no_kill:
-            container.remove()
+        runtime.finalize()
 
         if exit != 0:
             raise Exception(
