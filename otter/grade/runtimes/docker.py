@@ -16,7 +16,6 @@ class DockerRuntime():
         self.command = command
         self.volumes = volumes
         self.no_kill = no_kill
-        self.create(**kwargs)
         self.container = self.create(**kwargs)
         assert self.container is not None
 
@@ -24,7 +23,7 @@ class DockerRuntime():
         """Use the defined runtime environment to create the container
         """
         container = docker.container.create(self.image, self.command,
-                                                 **kwargs)
+                                            **kwargs)
         for local_path, container_path in self.volumes:
             docker.container.copy(local_path, (container, container_path))
         return container

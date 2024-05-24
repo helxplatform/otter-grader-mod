@@ -176,7 +176,7 @@ def grade_submission(
         runtime_class = get_runtime(
             os.environ.get('OTTER_GRADE_RUNTIME', 'docker'))
         runtime = runtime_class(image, command=["/autograder/run_autograder"],
-                                volumes=volumes, no_kill=no_kill)
+                                volumes=volumes, no_kill=no_kill, **args)
         # Launches container
         runtime.start()
 
