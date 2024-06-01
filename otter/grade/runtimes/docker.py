@@ -1,23 +1,14 @@
 """Default local docker executor for grade containers"""
 
 from python_on_whales import docker
+from ._base import BaseRuntime
 
-class DockerRuntime():
+class DockerRuntime(BaseRuntime):
     """Class for executing grader in the default Docker container runtime
 
     Ideally, can be subclassed with specific methods overridden to allow
     alternate runtimes to be used.
     """
-
-    def __init__(self, image, command, volumes, no_kill=False, **kwargs):
-        """Instantiate the runtime object
-        """
-        self.image = image
-        self.command = command
-        self.volumes = volumes
-        self.no_kill = no_kill
-        self.container = self.create(**kwargs)
-        assert self.container is not None
 
     def create(self, **kwargs):
         """Use the defined runtime environment to create the container

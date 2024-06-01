@@ -1,78 +1,23 @@
 """Docker container management for Otter Grade"""
 
-import json
 import os
 import pandas as pd
-import pathlib
-import pkg_resources
 import shutil
 import tempfile
-import zipfile
+import pkg_resources
 
 from concurrent.futures import ThreadPoolExecutor, wait
 from textwrap import indent
 from typing import List, Optional
 
-from python_on_whales import docker
-
-from .utils import OTTER_DOCKER_IMAGE_NAME
 from .runtimes import get_runtime
+from .builders import get_builder
+
+from ..utils import loggers
 
 from ..run.run_autograder.autograder_config import AutograderConfig
-from ..utils import loggers, OTTER_CONFIG_FILENAME
-
 
 LOGGER = loggers.get_logger(__name__)
-
-
-def build_image(ag_zip_path: str, base_image: str, tag: str, config: AutograderConfig):
-    """
-    Creates a grading image based on the autograder zip file and attaches a tag.
-
-    Args:
-        ag_zip_path (``str``): path to the autograder zip file
-        base_image (``str``): base Docker image to build from
-        tag (``str``): tag to be added when creating the image
-        config (``otter.run.run_autograder.autograder_config.AutograderConfig``): config overrides
-            for the autograder
-
-    Returns:
-        ``str``: the tag of the newly-build Docker image
-    """
-    image = OTTER_DOCKER_IMAGE_NAME + ":" + tag
-    dockerfile_path = pkg_resources.resource_filename(__name__, "Dockerfile")
-
-    LOGGER.info(f"Building image using {base_image} as base image")
-
-    with tempfile.TemporaryDirectory() as temp_dir:
-        with zipfile.ZipFile(ag_zip_path, 'r') as zip_ref:
-            zip_ref.extractall(temp_dir)
-
-        # Update the otter_config.json file from the autograder zip with the provided config
-        # overrides.
-        config_path = pathlib.Path(temp_dir) / OTTER_CONFIG_FILENAME
-        old_config = AutograderConfig()
-        if config_path.exists():
-            old_config = AutograderConfig(json.loads(config_path.read_text("utf-8")))
-
-        old_config.update(config.get_user_config())
-        config_path.write_text(json.dumps(old_config.get_user_config()))
-
-        try:
-            docker.build(
-                temp_dir,
-                build_args={"BASE_IMAGE": base_image},
-                tags=[image],
-                file=dockerfile_path,
-                load=True,
-            )
-        except TypeError as e:
-            raise TypeError(
-                f"Docker build failed; if this is your first time seeing this error, ensure that " \
-                "Docker is running on your machine.\n\nOriginal error: {e}")
-
-    return image
-
 
 def launch_containers(
     ag_zip_path: str,
@@ -106,7 +51,11 @@ def launch_containers(
     """
     pool = ThreadPoolExecutor(num_containers)
     futures = []
-    image = build_image(ag_zip_path, base_image, tag, config)
+    build_image = get_builder(
+        os.environ.get('OTTER_GRADE_BUILDER', 'docker'))
+
+    dockerfile_path = pkg_resources.resource_filename(__name__, "Dockerfile")
+    image = build_image(dockerfile_path, ag_zip_path, base_image, tag, config)
 
     for subm_path in submission_paths:
         futures += [pool.submit(
