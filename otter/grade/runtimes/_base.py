@@ -3,27 +3,23 @@
 class BaseRuntime():
     """Abstract base runtime class"""
 
-    def __init__(self, image, command, volumes, no_kill=False, **kwargs):
+    def __init__(self, image, command, volumes, no_kill=False, no_create=False,
+                 **kwargs):
         """Instantiate the runtime object
         """
         self.image = image
         self.command = command
         self.volumes = volumes
         self.no_kill = no_kill
-        self.container = self.create(**kwargs)
-        assert self.container is not None
+        if not no_create:
+            self.container = self.create(**kwargs)
+            assert self.container is not None
 
     def create(self, **kwargs):
         """Create the container
         """
         raise NotImplementedError(
             "Runtime baseclass create() invoked, must be overridden!")
-
-    def start(self):
-        """Starts the container
-        """
-        raise NotImplementedError(
-            "Runtime baseclass start() invoked, must be overridden!")
 
     def wait(self):
         """Wait the container completion

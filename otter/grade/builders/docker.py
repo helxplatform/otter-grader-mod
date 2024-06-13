@@ -1,11 +1,11 @@
 """Default docker image builder
 """
 
-import logging
 import tempfile
 import zipfile
 import pathlib
 import json
+import logging
 
 from python_on_whales import docker
 
@@ -25,8 +25,8 @@ def build_image(dockerfile: str, ag_zip_path: str, base_image: str, tag: str,
     ag_zip_path (``str``): path to the autograder zip file
     base_image (``str``): base Docker image to build from
     tag (``str``): tag to be added when creating the image
-    config (``otter.run.run_autograder.autograder_config.AutograderConfig``): config overrides
-    for the autograder
+    config (``otter.run.run_autograder.autograder_config.AutograderConfig``):
+        config overrides for the autograder
 
     Returns:
     ``str``: the tag of the newly-build Docker image

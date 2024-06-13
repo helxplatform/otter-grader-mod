@@ -30,7 +30,7 @@ def main(
     pdfs: bool = False,
     prune: bool = False,
     force: bool = False,
-    timeout: bool = None,
+    timeout: int = None,
     no_network: bool = False,
     debug: bool = False,
 ):

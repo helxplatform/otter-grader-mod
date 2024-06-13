@@ -17,12 +17,8 @@ class DockerRuntime(BaseRuntime):
                                             **kwargs)
         for local_path, container_path in self.volumes:
             docker.container.copy(local_path, (container, container_path))
+        docker.container.start(container)
         return container
-
-    def start(self):
-        """Starts the container
-        """
-        docker.container.start(self.container)
 
     def wait(self):
         """Wait for completion of the container process, returns rval

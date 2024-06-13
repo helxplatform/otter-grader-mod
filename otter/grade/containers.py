@@ -121,13 +121,11 @@ def grade_submission(
         if network is not None and not network:
             args['networks'] = 'none'
 
-        # Creates the container
+        # Creates the container and launches it
         runtime_class = get_runtime(
             os.environ.get('OTTER_GRADE_RUNTIME', 'docker'))
         runtime = runtime_class(image, command=["/autograder/run_autograder"],
                                 volumes=volumes, no_kill=no_kill, **args)
-        # Launches container
-        runtime.start()
 
         # Watches for timeout
         if timeout:
