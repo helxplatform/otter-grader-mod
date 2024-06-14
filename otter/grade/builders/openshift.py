@@ -77,6 +77,7 @@ def _make_bc_spec(image, tag, repo, base_image, dockerfile, namespace,
                                 "name": base_image
                             },
                             "env": env,
+                            "imageOptimizationPolicy": "SkipLayers",
                         },
                         "type": "Docker"
                     },
@@ -89,13 +90,13 @@ def _make_bc_spec(image, tag, repo, base_image, dockerfile, namespace,
                     "resources": {
                         "limits": {
                             "cpu": "1",
-                            "ephemeral-storage": "1G",
+                            "ephemeral-storage": "4G",
                             "memory": "1G",
                         },
                     },
                     "requests": {
                         "cpu": "1",
-                        "ephemeral-storage": "1G",
+                        "ephemeral-storage": "4G",
                         "memory": "1G"
                     }
                 },

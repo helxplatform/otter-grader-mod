@@ -26,7 +26,7 @@ def main(
     containers: int = 4, 
     ext: str = "ipynb",
     no_kill: bool = False,
-    image: str = "ubuntu:22.04", 
+    image: str = None,
     pdfs: bool = False,
     prune: bool = False,
     force: bool = False,
@@ -83,6 +83,9 @@ def main(
         raise TypeError("paths must be a tuple of valid paths")
     elif len(paths) == 0:
         raise ValueError("No paths specified")
+
+    if not image:
+        image = os.environ.get('OTTER_GRADE_BASE_IMAGE', "ubuntu:22.04")
 
     # check file paths
     assert_path_exists([
