@@ -47,10 +47,12 @@ def build_image(dockerfile: str, ag_zip_path: str, base_image: str, tag: str,
             zip_ref.extractall(temp_dir)
 
         # Clone the gh-build repo and remove the /wants dir
-        Repo.clone_from(repo_url, local_repo_path)
-        repo = local_repo_path
+        if not os.path.exists(local_repo_path):
+            repo = Repo.clone_from(repo_url, local_repo_path)
+        repo = Repo(local_repo_path)
         build_wants_dir = 'build-wants'
-        shutil.rmtree(os.path.join(local_repo_path, build_wants_dir))
+        if os.path.isdir(os.path.join(local_repo_path, build_wants_dir)):
+            shutil.rmtree(os.path.join(local_repo_path, build_wants_dir))
         # Remake the path
         os.makedirs(os.path.join(local_repo_path, build_wants_dir))
         for root,_,files in os.walk(temp_dir):
@@ -58,14 +60,14 @@ def build_image(dockerfile: str, ag_zip_path: str, base_image: str, tag: str,
               file_path = os.path.join(root, file_name)
               if os.path.isfile(file_path):
                 if root.endswith('tests') or file_name.startswith('files') or file_name in files_to_move:
-                  shutil.copy(file_path, os.path.join(build_wants_dir, file_name))
+                  shutil.copy(file_path, os.path.join(local_repo_path, build_wants_dir, file_name))
     
         # Commit changes
-        commit_message = "Added archive.zip to build-wants directory"
+        commit_message = "Added generated files to build-wants directory"
         repo.index.commit(commit_message)
 
         # Push changes to remote repository
-        origin = repo.remote(name='origin')
+        origin = repo.remote(name='main')
         origin.push()
 
         # Get the latest commit (HEAD commit) after push
