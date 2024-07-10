@@ -67,7 +67,7 @@ def build_image(dockerfile: str, ag_zip_path: str, base_image: str, tag: str,
         repo.index.commit(commit_message)
 
         # Push changes to remote repository
-        origin = repo.remote(name='main')
+        origin = repo.remote(name='origin')
         origin.push()
 
         # Get the latest commit (HEAD commit) after push
