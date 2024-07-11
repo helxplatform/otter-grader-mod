@@ -16,6 +16,7 @@ from ...run.run_autograder.autograder_config import AutograderConfig
 
 OTTER_IMAGE_NAME = 'containers.renci.org/helxplatform/ottergrader/gradebuild'
 
+github_token = os.getenv('GITHUB_TOKEN')
 repo_url = 'github.com/helxplatform/otter-builder.git'
 local_repo_path = '/tmp/builder'
 files_to_move = ['run_autograder', 'setup.sh', 'environment.yml', 'otter_config.json', 'run_otter.py', 'requirements.*', 'files*']
@@ -48,7 +49,7 @@ def build_image(dockerfile: str, ag_zip_path: str, base_image: str, tag: str,
 
         # Clone the gh-build repo and remove the /wants dir
         if not os.path.exists(local_repo_path):
-            rurl = f'https://{repo_url}'
+            rurl = f'https://{github_token}@{repo_url}'
             repo = Repo.clone_from(rurl, local_repo_path)
         repo = Repo(local_repo_path)
         build_wants_dir = 'build-wants'
@@ -81,7 +82,6 @@ def build_image(dockerfile: str, ag_zip_path: str, base_image: str, tag: str,
         repo.index.commit(commit_message)
 
         # Push changes to remote repository
-        github_token = os.getenv('GITHUB_TOKEN')
         remote = repo.remote(name='origin')
         remote_url_with_token = f'https://{github_token}@{repo_url}'
         remote.set_url(remote_url_with_token)
