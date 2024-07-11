@@ -16,7 +16,7 @@ from ...run.run_autograder.autograder_config import AutograderConfig
 
 OTTER_IMAGE_NAME = 'containers.renci.org/helxplatform/ottergrader/gradebuild'
 
-repo_url = 'https://github.com/joshua-seals/builder.git'
+repo_url = 'github.com/joshua-seals/builder.git'
 local_repo_path = '/tmp/builder'
 files_to_move = ['run_autograder', 'setup.sh', 'environment.yml', 'otter_config.json', 'run_otter.py', 'requirements.*', 'files*']
 
@@ -48,31 +48,48 @@ def build_image(dockerfile: str, ag_zip_path: str, base_image: str, tag: str,
 
         # Clone the gh-build repo and remove the /wants dir
         if not os.path.exists(local_repo_path):
-            repo = Repo.clone_from(repo_url, local_repo_path)
+            rurl = f'https://{repo_url}'
+            repo = Repo.clone_from(rurl, local_repo_path)
         repo = Repo(local_repo_path)
         build_wants_dir = 'build-wants'
         if os.path.isdir(os.path.join(local_repo_path, build_wants_dir)):
             shutil.rmtree(os.path.join(local_repo_path, build_wants_dir))
         # Remake the path
         os.makedirs(os.path.join(local_repo_path, build_wants_dir))
-        for root,_,files in os.walk(temp_dir):
+
+        # Iterate through the files in the temporary directory
+        for root, _, files in os.walk(temp_dir):
             for file_name in files:
-              file_path = os.path.join(root, file_name)
-              if os.path.isfile(file_path):
-                if root.endswith('tests') or file_name.startswith('files') or file_name in files_to_move:
-                  shutil.copy(file_path, os.path.join(local_repo_path, build_wants_dir, file_name))
-    
+                file_path = os.path.join(root, file_name)
+
+                # Check if the root directory ends with 'tests'
+                if root.endswith('tests'):
+                    # Copy the entire 'tests' directory to build-wants
+                    tests_dest = os.path.join(local_repo_path, build_wants_dir, 'tests')
+                    shutil.copytree(root, tests_dest, dirs_exist_ok=True)
+
+                # Check if it's a regular file and matches criteria to move
+                elif os.path.isfile(file_path):
+                    if file_name.startswith('files') or file_name in files_to_move:
+                        dest_file = os.path.join(local_repo_path, build_wants_dir, file_name)
+                        shutil.copy(file_path, dest_file)
+                        print(f"Copied {file_path} to {dest_file}")
+
+        repo.git.add('-A')
         # Commit changes
         commit_message = "Added generated files to build-wants directory"
         repo.index.commit(commit_message)
 
         # Push changes to remote repository
-        origin = repo.remote(name='origin')
-        origin.push()
+        github_token = os.getenv('GITHUB_TOKEN')
+        remote = repo.remote(name='origin')
+        remote_url_with_token = f'https://{github_token}@{repo_url}'
+        remote.set_url(remote_url_with_token)
+        remote.push()
 
         # Get the latest commit (HEAD commit) after push
         head_commit = repo.head.commit
 
         # Get the short SHA of the latest commit
         short_sha = head_commit.hexsha[:7]
-        return OTTER_DOCKER_IMAGE_NAME + ":" + short_sha
+    return OTTER_DOCKER_IMAGE_NAME + ":" + short_sha
