@@ -16,7 +16,7 @@ from ...run.run_autograder.autograder_config import AutograderConfig
 
 OTTER_IMAGE_NAME = 'containers.renci.org/helxplatform/ottergrader/gradebuild'
 
-repo_url = 'github.com/joshua-seals/builder.git'
+repo_url = 'github.com/helxplatform/otter-builder.git'
 local_repo_path = '/tmp/builder'
 files_to_move = ['run_autograder', 'setup.sh', 'environment.yml', 'otter_config.json', 'run_otter.py', 'requirements.*', 'files*']
 
