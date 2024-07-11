@@ -14,7 +14,7 @@ with open("requirements.txt") as f:
 	install_requires = f.readlines()
 
 setuptools.setup(
-	name = "otter-grader",
+	name = "renci-otter-grader",
 	version = version,
 	author = "Christopher Pyles",
 	author_email = "otter-grader@berkeley.edu",
