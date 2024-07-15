@@ -152,6 +152,7 @@ class OpenshiftRuntime(BaseRuntime):
 
     def create(self, **kwargs):
         """Create the container"""
+        LOGGER.info(f"Creating job spec")
         job_def = self._create_jobspec()
         self._job_selector = oc.create(job_def)
         podname = None

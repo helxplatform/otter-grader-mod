@@ -74,7 +74,7 @@ def build_image(dockerfile: str, ag_zip_path: str, base_image: str, tag: str,
                     if file_name.startswith('files') or file_name in files_to_move:
                         dest_file = os.path.join(local_repo_path, build_wants_dir, file_name)
                         shutil.copy(file_path, dest_file)
-                        print(f"Copied {file_path} to {dest_file}")
+                        LOGGER.info(f"Copied {file_path} to {dest_file}")
 
         repo.git.add('-A')
         # Commit changes
@@ -92,4 +92,5 @@ def build_image(dockerfile: str, ag_zip_path: str, base_image: str, tag: str,
 
         # Get the short SHA of the latest commit
         short_sha = head_commit.hexsha[:7]
+        LOGGER.info(f"Passing {OTTER_DOCKER_IMAGE_NAME}:{short_sha} image to runtime")
     return OTTER_DOCKER_IMAGE_NAME + ":" + short_sha
