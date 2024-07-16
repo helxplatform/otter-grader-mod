@@ -16,4 +16,5 @@ ipywidgets
 ipylab
 GitPython
 openshift_client
+kubernetes
 
