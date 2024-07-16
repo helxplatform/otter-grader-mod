@@ -154,31 +154,32 @@ class OpenshiftRuntime(BaseRuntime):
         """Create the container"""
         LOGGER.info(f"Creating job spec")
         job_def = self._create_jobspec()
-        self._job_selector = oc.create(job_def)
-        podname = None
-        while not podname:
-            try:
-                podname = self.pod.name()
-            except IndexError:
-                sleep(1)
-        LOGGER.info("Pod %s created by job %s", podname, self.job.name())
-        LOGGER.debug("Pod %s contains containers (%s)", podname,
-                     str([c['name'] for c in
-                          self.pod.model['spec']['containers']]))
-        LOGGER.debug("Pod %s contains init containers (%s)", podname,
-                     str([c['name'] for c in
-                          self.pod.model['spec']['initContainers']]))
-        for local_path, container_path in self.volumes:
-            oc.invoke('cp',
-                      [
-                          local_path,
-                          podname + ':' + container_path,
-                          '-c', 'init-filewait'
-                      ])
-        with tempfile.NamedTemporaryFile() as tf:
-            # Create an empty file then copy it in
-            oc.invoke('cp', [tf.name, podname + ':/tmp/.ottergrader_ready',
-                             '-c', 'init-filewait'])
+        with oc.tls_verify(enable=False):
+            self._job_selector = oc.create(job_def)
+            podname = None
+            while not podname:
+                try:
+                    podname = self.pod.name()
+                except IndexError:
+                    sleep(1)
+            LOGGER.info("Pod %s created by job %s", podname, self.job.name())
+            LOGGER.debug("Pod %s contains containers (%s)", podname,
+                        str([c['name'] for c in
+                            self.pod.model['spec']['containers']]))
+            LOGGER.debug("Pod %s contains init containers (%s)", podname,
+                        str([c['name'] for c in
+                            self.pod.model['spec']['initContainers']]))
+            for local_path, container_path in self.volumes:
+                oc.invoke('cp',
+                        [
+                            local_path,
+                            podname + ':' + container_path,
+                            '-c', 'init-filewait'
+                        ])
+            with tempfile.NamedTemporaryFile() as tf:
+                # Create an empty file then copy it in
+                oc.invoke('cp', [tf.name, podname + ':/tmp/.ottergrader_ready',
+                                '-c', 'init-filewait'])
 
     @property
     def pod(self):
