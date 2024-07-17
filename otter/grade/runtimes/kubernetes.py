@@ -148,7 +148,7 @@ class KubernetesRuntime(BaseRuntime):
         job = self._create_jobspec()
         batch_v1 = client.BatchV1Api()
         api_response = batch_v1.create_namespaced_job(
-            body=job
+            body=job,
             namespace="eduhelx-prof-staging"
         )
         LOGGER.info(f"Job created. status='{str(api_response.status)}'")
