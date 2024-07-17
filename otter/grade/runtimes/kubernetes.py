@@ -148,7 +148,7 @@ class KubernetesRuntime(BaseRuntime):
     def create(self, **kwargs):
         """Create the container"""
         LOGGER.info(f"Creating job")
-        config = self.k8s_config
+        config = config.load_incluster_config()
         job = self._create_jobspec()
         batch_v1 = client.BatchV1Api()
         api_response = batch_v1.create_namespaced_job(
