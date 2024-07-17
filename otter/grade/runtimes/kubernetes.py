@@ -35,7 +35,7 @@ class KubernetesRuntime(BaseRuntime):
         if not kwargs.get('no_create', False):
             self.create()
         # Need k8s config
-        k8s_conf = config.load_incluster_config()
+        self.k8s_config = config.load_incluster_config()
 
     def _get_current_namespace(self):
         """Get the name of the current namespace or project"""
@@ -145,10 +145,13 @@ class KubernetesRuntime(BaseRuntime):
     def create(self, **kwargs):
         """Create the container"""
         LOGGER.info(f"Creating job")
-        api_response = api_instance.create_namespaced_job(
-            body=self.job
-            namespace=self.Namespace
+        job = self._create_jobspec()
+        batch_v1 = client.BatchV1Api()
+        api_response = batch_v1.create_namespaced_job(
+            body=job
+            # namespace=self.Namespace
         )
+        LOGGER.info(f"Job created. status='{str(api_response.status)}'")
         # with oc.tls_verify(enable=False):
         #     self._job_selector = oc.create(job_def)
         #     podname = None
