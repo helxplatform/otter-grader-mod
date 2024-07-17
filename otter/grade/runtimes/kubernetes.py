@@ -39,7 +39,10 @@ class KubernetesRuntime(BaseRuntime):
 
     def _get_current_namespace(self):
         """Get the name of the current namespace or project"""
-        return 
+        with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace", "r") as secrets:
+                for line in secrets:
+                    namespace = line
+        return namespace
 
     def _get_env(self):
         """Put any needed environment variables into the env
@@ -145,6 +148,7 @@ class KubernetesRuntime(BaseRuntime):
     def create(self, **kwargs):
         """Create the container"""
         LOGGER.info(f"Creating job")
+        config = self.k8s_config
         job = self._create_jobspec()
         batch_v1 = client.BatchV1Api()
         api_response = batch_v1.create_namespaced_job(
