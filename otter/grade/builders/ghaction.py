@@ -4,17 +4,12 @@ github-actions builder
 import os
 import tempfile
 import zipfile
-import pathlib
-import json
 import shutil
-from glob import glob
 from git import Repo 
 
 from ..utils import OTTER_DOCKER_IMAGE_NAME
-from ...utils import loggers, OTTER_CONFIG_FILENAME
+from ...utils import loggers
 from ...run.run_autograder.autograder_config import AutograderConfig
-
-OTTER_IMAGE_NAME = 'containers.renci.org/helxplatform/ottergrader/gradebuild'
 
 github_token = os.getenv('GITHUB_TOKEN')
 repo_url = 'github.com/helxplatform/otter-builder.git'

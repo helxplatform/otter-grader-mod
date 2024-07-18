@@ -82,7 +82,8 @@ class KubernetesRuntime(BaseRuntime):
             client.V1Container(
                 name="init-filewait",
                 image="busybox:latest",
-                command=["sh", "-c", 'until [ -f /tmp/.ottergrader_ready ]; do echo "waiting ready file"; sleep 2; done;'],
+                command = ["sh", "-c", 'echo "Init container started - waiting on build"; sleep 300'],
+                # command=["sh", "-c", 'until [ -f /tmp/.ottergrader_ready ]; do echo "waiting ready file"; sleep 2; done;'],
                 env=env,
                 volume_mounts=[
                     client.V1VolumeMount(mount_path="/autograder/submission", name="submission-volume")
@@ -110,13 +111,24 @@ class KubernetesRuntime(BaseRuntime):
             )
         ]
 
-        # Define volumes
+    # Use pre-existing PersistentVolumeClaim (PVC)
         volumes = [
-            client.V1Volume(
-                name="submission-volume",
-                empty_dir=client.V1EmptyDirVolumeSource(size_limit="100Mi")
-            )
+            client.V1PersistentVolumeClaimVolumeSource(claim_name="existing-pvc-name")
         ]
+        # # Define volumes
+        # volumes = [
+        #     client.V1PersistentVolumeClaim(
+        #     api_version="v1",
+        #     kind="PersistentVolumeClaim",
+        #     metadata=client.V1ObjectMeta(name="submission-volume"),
+        #     spec=client.V1PersistentVolumeClaimSpec(
+        #         access_modes=["ReadWriteMany"],
+        #         resources=client.V1ResourceRequirements(
+        #             requests={"storage": "100Mi"}
+        #             )
+        #         )
+        #     )
+        # ]
 
         # Define Pod template spec
         pod_template_spec = client.V1PodTemplateSpec(
