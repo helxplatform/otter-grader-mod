@@ -72,27 +72,9 @@ class KubernetesRuntime(BaseRuntime):
         """Configure Pod template container
         """
         env = self._get_env()
-    #     env = [
-    #     client.V1EnvVar(name="ENV_VAR_NAME", value="value"),
-    #     # Add more environment variables as needed
-    # ]
-
-        # Define init containers
-        init_containers = [
-            client.V1Container(
-                name="init-filewait",
-                image="busybox:latest",
-                command = ["sh", "-c", 'echo "Init container started - waiting on build"; sleep 300'],
-                # command=["sh", "-c", 'until [ -f /tmp/.ottergrader_ready ]; do echo "waiting ready file"; sleep 2; done;'],
-                env=env,
-                volume_mounts=[
-                    client.V1VolumeMount(mount_path="/autograder/submission", name="submission-volume")
-                ],
-                resources=client.V1ResourceRequirements(
-                    limits={"cpu": "1", "ephemeral-storage": "1G", "memory": "1G"},
-                    requests={"cpu": "1", "ephemeral-storage": "1G", "memory": "1G"}
-                )
-            )
+        # Define volumes
+        volumes = [
+            client.V1PersistentVolumeClaimVolumeSource(claim_name="submission-volume")
         ]
 
         # Define containers
@@ -111,10 +93,62 @@ class KubernetesRuntime(BaseRuntime):
             )
         ]
 
-    # Use pre-existing PersistentVolumeClaim (PVC)
-        volumes = [
-            client.V1PersistentVolumeClaimVolumeSource(claim_name="submission-volume")
+        # Define init containers
+        init_containers = [
+            client.V1Container(
+                name="init-filewait",
+                image="busybox:latest",
+                command=["sh", "-c", 'echo "Init container started"; sleep 300'],
+                env=env,
+                volume_mounts=[
+                    client.V1VolumeMount(mount_path="/autograder/submission", name="submission-volume")
+                ],
+                resources=client.V1ResourceRequirements(
+                    limits={"cpu": "1", "ephemeral-storage": "1G", "memory": "1G"},
+                    requests={"cpu": "1", "ephemeral-storage": "1G", "memory": "1G"}
+                )
+            )
         ]
+
+
+        # Define init containers
+    #     init_containers = [
+    #         client.V1Container(
+    #             name="init-filewait",
+    #             image="busybox:latest",
+    #             command = ["sh", "-c", 'echo "Init container started - waiting on build"; sleep 300'],
+    #             # command=["sh", "-c", 'until [ -f /tmp/.ottergrader_ready ]; do echo "waiting ready file"; sleep 2; done;'],
+    #             env=env,
+    #             volume_mounts=[
+    #                 client.V1VolumeMount(mount_path="/autograder/submission", name="submission-volume")
+    #             ],
+    #             resources=client.V1ResourceRequirements(
+    #                 limits={"cpu": "1", "ephemeral-storage": "1G", "memory": "1G"},
+    #                 requests={"cpu": "1", "ephemeral-storage": "1G", "memory": "1G"}
+    #             )
+    #         )
+    #     ]
+
+    #     # Define containers
+    #     containers = [
+    #         client.V1Container(
+    #             name=OTTER_DOCKER_IMAGE_NAME,
+    #             image=self.image_spec,
+    #             env=env,
+    #             volume_mounts=[
+    #                 client.V1VolumeMount(mount_path="/autograder/submission", name="submission-volume")
+    #             ],
+    #             resources=client.V1ResourceRequirements(
+    #                 limits={"cpu": "1", "ephemeral-storage": "1G", "memory": "1G"},
+    #                 requests={"cpu": "1", "ephemeral-storage": "1G", "memory": "1G"}
+    #             )
+    #         )
+    #     ]
+
+    # # Use pre-existing PersistentVolumeClaim (PVC)
+    #     volumes = [
+    #         client.V1PersistentVolumeClaimVolumeSource(claim_name="submission-volume")
+    #     ]
         # # Define volumes
         # volumes = [
         #     client.V1PersistentVolumeClaim(
