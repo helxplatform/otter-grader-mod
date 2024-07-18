@@ -72,10 +72,10 @@ class KubernetesRuntime(BaseRuntime):
         """Configure Pod template container
         """
         env = self._get_env()
-        # Define volumes
-        volumes = [
-            client.V1PersistentVolumeClaimVolumeSource(claim_name="submission-volume")
-        ]
+        # # Define volumes
+        # volumes = [
+        #     client.V1PersistentVolumeClaimVolumeSource(claim_name="submission-volume")
+        # ]
 
         # Define containers
         containers = [
@@ -149,20 +149,20 @@ class KubernetesRuntime(BaseRuntime):
     #     volumes = [
     #         client.V1PersistentVolumeClaimVolumeSource(claim_name="submission-volume")
     #     ]
-        # # Define volumes
-        # volumes = [
-        #     client.V1PersistentVolumeClaim(
-        #     api_version="v1",
-        #     kind="PersistentVolumeClaim",
-        #     metadata=client.V1ObjectMeta(name="submission-volume"),
-        #     spec=client.V1PersistentVolumeClaimSpec(
-        #         access_modes=["ReadWriteMany"],
-        #         resources=client.V1ResourceRequirements(
-        #             requests={"storage": "100Mi"}
-        #             )
-        #         )
-        #     )
-        # ]
+        # Define volumes
+        volumes = [
+            client.V1PersistentVolumeClaim(
+            api_version="v1",
+            kind="PersistentVolumeClaim",
+            metadata=client.V1ObjectMeta(name="submission-volume"),
+            spec=client.V1PersistentVolumeClaimSpec(
+                access_modes=["ReadWriteMany"],
+                resources=client.V1ResourceRequirements(
+                    requests={"storage": "100Mi"}
+                    )
+                )
+            )
+        ]
 
         # Define Pod template spec
         pod_template_spec = client.V1PodTemplateSpec(
