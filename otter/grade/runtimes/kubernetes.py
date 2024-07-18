@@ -173,9 +173,7 @@ class KubernetesRuntime(BaseRuntime):
 
     @property
     def pod(self):
-        """Return the pod APIObject"""
-        return self._job_selector.object().get_owned('pod')[0]
-
+        return self.pod_name
 
     @property
     def job(self):
@@ -216,11 +214,11 @@ class KubernetesRuntime(BaseRuntime):
                 return ics['name']
         return None
 
-    def kill(self):
-        """Kill the container"""
-        active = self._get_active_container()
-        if active:
-            self.pod.execute(['kill', '-9', '1'], container_name=active)
+    # def kill(self):
+    #     """Kill the container"""
+    #     active = self._get_active_container()
+    #     if active:
+    #         self.pod.execute(['kill', '-9', '1'], container_name=active)
 
     def get_container_id(self):
         """Returns the Pod UID"""
