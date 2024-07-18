@@ -2,8 +2,8 @@
 """
 
 import os
-import tempfile
 from time import sleep
+import subprocess
 
 from kubernetes import client, config
 
@@ -24,10 +24,10 @@ class KubernetesRuntime(BaseRuntime):
         super().__init__(*args, no_create=True, **kwargs)
         self.secret_name = kwargs.get('secret_name',
                                       'harbor')
-        self.namespace = kwargs.get('namespace', None)
-        if not self.namespace:
-            self.namespace = self._get_current_namespace
-
+        # self.namespace = kwargs.get('namespace', None)
+        # if not self.namespace:
+        self.namespace = self._get_current_namespace
+        self.volumes = []
         self.repo = os.environ.get(
             'OTTERGRADER_REPO_NAME',
             'containers.renci.org/helxplatform/ottergrader')
@@ -35,7 +35,10 @@ class KubernetesRuntime(BaseRuntime):
         if not kwargs.get('no_create', False):
             self.create()
         # Need k8s config
-        self.k8s_config = config.load_incluster_config()
+        config.load_incluster_config()
+        self.batch_v1 = client.BatchV1Api()
+        self.core_v1 = client.CoreV1Api()
+        self.pod_name = None
 
     def _get_current_namespace(self):
         """Get the name of the current namespace or project"""
@@ -72,10 +75,24 @@ class KubernetesRuntime(BaseRuntime):
         """Configure Pod template container
         """
         env = self._get_env()
-        # # Define volumes
-        # volumes = [
-        #     client.V1PersistentVolumeClaimVolumeSource(claim_name="submission-volume")
-        # ]
+
+        # Define init containers
+        init_containers = [
+            client.V1Container(
+                name="init-filewait",
+                image="busybox:latest",
+                command = ["sh", "-c", 'echo "Init container started - waiting on build"; sleep 300'],
+                # command=["sh", "-c", 'until [ -f /tmp/.ottergrader_ready ]; do echo "waiting ready file"; sleep 2; done;'],
+                env=env,
+                volume_mounts=[
+                    client.V1VolumeMount(mount_path="/autograder/submission", name="submission-volume")
+                ],
+                resources=client.V1ResourceRequirements(
+                    limits={"cpu": "1", "ephemeral-storage": "1G", "memory": "1G"},
+                    requests={"cpu": "1", "ephemeral-storage": "1G", "memory": "1G"}
+                )
+            )
+        ]
 
         # Define containers
         containers = [
@@ -93,74 +110,10 @@ class KubernetesRuntime(BaseRuntime):
             )
         ]
 
-        # Define init containers
-        init_containers = [
-            client.V1Container(
-                name="init-filewait",
-                image="busybox:latest",
-                command=["sh", "-c", 'echo "Init container started"; sleep 300'],
-                env=env,
-                volume_mounts=[
-                    client.V1VolumeMount(mount_path="/autograder/submission", name="submission-volume")
-                ],
-                resources=client.V1ResourceRequirements(
-                    limits={"cpu": "1", "ephemeral-storage": "1G", "memory": "1G"},
-                    requests={"cpu": "1", "ephemeral-storage": "1G", "memory": "1G"}
-                )
-            )
-        ]
-
-
-        # Define init containers
-    #     init_containers = [
-    #         client.V1Container(
-    #             name="init-filewait",
-    #             image="busybox:latest",
-    #             command = ["sh", "-c", 'echo "Init container started - waiting on build"; sleep 300'],
-    #             # command=["sh", "-c", 'until [ -f /tmp/.ottergrader_ready ]; do echo "waiting ready file"; sleep 2; done;'],
-    #             env=env,
-    #             volume_mounts=[
-    #                 client.V1VolumeMount(mount_path="/autograder/submission", name="submission-volume")
-    #             ],
-    #             resources=client.V1ResourceRequirements(
-    #                 limits={"cpu": "1", "ephemeral-storage": "1G", "memory": "1G"},
-    #                 requests={"cpu": "1", "ephemeral-storage": "1G", "memory": "1G"}
-    #             )
-    #         )
-    #     ]
-
-    #     # Define containers
-    #     containers = [
-    #         client.V1Container(
-    #             name=OTTER_DOCKER_IMAGE_NAME,
-    #             image=self.image_spec,
-    #             env=env,
-    #             volume_mounts=[
-    #                 client.V1VolumeMount(mount_path="/autograder/submission", name="submission-volume")
-    #             ],
-    #             resources=client.V1ResourceRequirements(
-    #                 limits={"cpu": "1", "ephemeral-storage": "1G", "memory": "1G"},
-    #                 requests={"cpu": "1", "ephemeral-storage": "1G", "memory": "1G"}
-    #             )
-    #         )
-    #     ]
-
-    # # Use pre-existing PersistentVolumeClaim (PVC)
-    #     volumes = [
-    #         client.V1PersistentVolumeClaimVolumeSource(claim_name="submission-volume")
-    #     ]
-        # Define volumes
         volumes = [
-            client.V1PersistentVolumeClaim(
-            api_version="v1",
-            kind="PersistentVolumeClaim",
-            metadata=client.V1ObjectMeta(name="submission-volume"),
-            spec=client.V1PersistentVolumeClaimSpec(
-                access_modes=["ReadWriteMany"],
-                resources=client.V1ResourceRequirements(
-                    requests={"storage": "100Mi"}
-                    )
-                )
+            client.V1Volume(
+                name="submission-volume",
+                empty_dir=client.V1EmptyDirVolumeSource(size_limit="100Mi")
             )
         ]
 
@@ -194,62 +147,62 @@ class KubernetesRuntime(BaseRuntime):
     def create(self, **kwargs):
         """Create the container"""
         LOGGER.info(f"Creating job")
-        config.load_incluster_config()
+
         job = self._create_jobspec()
-        batch_v1 = client.BatchV1Api()
-        api_response = batch_v1.create_namespaced_job(
+        # batch_v1 = client.BatchV1Api()
+        created_job = self.batch_v1.create_namespaced_job(
             body=job,
-            namespace="eduhelx-prof-staging"
+            namespace=self.namespace
         )
-        LOGGER.info(f"Job created. status='{str(api_response.status)}'")
-        # with oc.tls_verify(enable=False):
-        #     self._job_selector = oc.create(job_def)
-        #     podname = None
-        #     while not podname:
-        #         try:
-        #             podname = self.pod.name()
-        #         except IndexError:
-        #             sleep(1)
-        #     LOGGER.info("Pod %s created by job %s", podname, self.job.name())
-        #     LOGGER.debug("Pod %s contains containers (%s)", podname,
-        #                 str([c['name'] for c in
-        #                     self.pod.model['spec']['containers']]))
-        #     LOGGER.debug("Pod %s contains init containers (%s)", podname,
-        #                 str([c['name'] for c in
-        #                     self.pod.model['spec']['initContainers']]))
-        #     for local_path, container_path in self.volumes:
-        #         oc.invoke('cp',
-        #                 [
-        #                     local_path,
-        #                     podname + ':' + container_path,
-        #                     '-c', 'init-filewait'
-        #                 ])
-        #     with tempfile.NamedTemporaryFile() as tf:
-        #         # Create an empty file then copy it in
-        #         oc.invoke('cp', [tf.name, podname + ':/tmp/.ottergrader_ready',
-        #                         '-c', 'init-filewait'])
+        LOGGER.info(f"Job created. status='{str(created_job.status)}'")
+
+        # Wait for Pod to be created
+        while not self.pod_name:
+            try:
+                # Get Pod associated with the Job
+                pods = self.core_v1.list_namespaced_pod(namespace=self.namespace, label_selector=f"job-name={created_job.metadata.name}")
+                if pods.items:
+                    self.pod_name = pods.items[0].metadata.name
+            except Exception as e:
+                LOGGER.error(f"Error occurred while fetching Pod: {e}")
+
+            if not self.pod_name:
+                sleep(1)  # Wait for 1 second before retrying
+        LOGGER.info(f"Pod has been created {self.pod_name}")
+        
 
     @property
     def pod(self):
         """Return the pod APIObject"""
         return self._job_selector.object().get_owned('pod')[0]
 
+
     @property
     def job(self):
         """Return the job APIObject"""
-        return self._job_selector.object()
+        if not self.pod_name:
+            return None  # Handle case where pod_name is not set yet
 
-    def wait(self): 
-        """Wait the container completion"""
-        while True:
-            conditions = self.job.model['status']['conditions']
-            statuses = [c['type'] for c in conditions]
-            if 'Failed' in statuses:
-                # Maybe we should log something? Dunno...
-                break
-            if 'Complete' in statuses:
-                break
-            sleep(4)
+        try:
+            # Retrieve the Job object by name
+            job_obj = self.batch_v1.read_namespaced_job(namespace=self.namespace, name=self.pod_name)
+            return job_obj
+        except Exception as e:
+            print(f"Error occurred while fetching Job: {e}")
+            return None
+
+
+    # def wait(self): 
+    #     """Wait the container completion"""
+    #     while True:
+    #         conditions = self.job.model['status']['conditions']
+    #         statuses = [c['type'] for c in conditions]
+    #         if 'Failed' in statuses:
+    #             # Maybe we should log something? Dunno...
+    #             break
+    #         if 'Complete' in statuses:
+    #             break
+    #         sleep(4)
 
 
     def _get_active_container(self):
@@ -270,26 +223,44 @@ class KubernetesRuntime(BaseRuntime):
             self.pod.execute(['kill', '-9', '1'], container_name=active)
 
     def get_container_id(self):
-        """Returns the pod uid"""
-        return self.pod.model['metadata']['uid']
+        """Returns the Pod UID"""
+        if not self.pod_name:
+            return None  # Handle case where pod_name is not set yet
 
-    def get_logs(self):
-        """Returns the logs for the container"""
-        logdict = self.pod.logs()
-        return list(logdict.values())[0]
+        try:
+            # Retrieve the Pod object by name
+            pod_obj = self.core_v1.read_namespaced_pod(namespace=self.namespace, name=self.pod_name)
+            return pod_obj.metadata.uid
+        except Exception as e:
+            print(f"Error occurred while fetching Pod: {e}")
+            return None
 
-    def finalize(self):
+    # def get_logs(self):
+    #     """Returns the logs for the container"""
+    #     logdict = self.pod.logs()
+    #     return list(logdict.values())[0]
+
+def finalize(self):
         """Final cleanup and writeout
 
         Should copy files back to the local paths and remove container if
         no_kill not set
         """
-        podname = self.pod.name()
-        for local_path, container_path in self.volumes:
-            oc.invoke('cp', [podname + ':' + container_path,
-                             local_path])
+        if not self.pod_name:
+            print("Pod name is not set. Finalize operation cannot proceed.")
+            return
 
-        if not self.no_kill:
-            self._job_selector.delete()
+        try:
+            # Copy files from Pod to local paths
+            for local_path, container_path in self.volumes:
+                command = ["kubectl", "cp", f"{self.pod_name}:{container_path}", local_path]
+                subprocess.run(command, check=True)
+
+            # Delete Job if no_kill is not set
+            if not self.no_kill:
+                self.batch_v1.delete_namespaced_job(namespace=self.namespace, name=self.pod_name, body=client.V1DeleteOptions())
+
+        except Exception as e:
+            print(f"Error occurred during finalize operation: {e}")
 
 runtime_class = KubernetesRuntime
