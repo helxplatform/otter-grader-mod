@@ -113,7 +113,7 @@ class KubernetesRuntime(BaseRuntime):
 
     # Use pre-existing PersistentVolumeClaim (PVC)
         volumes = [
-            client.V1PersistentVolumeClaimVolumeSource(claim_name="existing-pvc-name")
+            client.V1PersistentVolumeClaimVolumeSource(claim_name="submission-volume")
         ]
         # # Define volumes
         # volumes = [
