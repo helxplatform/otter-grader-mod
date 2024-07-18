@@ -22,23 +22,21 @@ class KubernetesRuntime(BaseRuntime):
         """
 
         super().__init__(*args, no_create=True, **kwargs)
+        config.load_incluster_config()
         self.secret_name = kwargs.get('secret_name',
                                       'harbor')
         # self.namespace = kwargs.get('namespace', None)
         # if not self.namespace:
         self.namespace = self._get_current_namespace
-        self.volumes = []
         self.repo = os.environ.get(
             'OTTERGRADER_REPO_NAME',
             'containers.renci.org/helxplatform/ottergrader')
         self.image_spec = self.repo + "/" + self.image
-        if not kwargs.get('no_create', False):
-            self.create()
-        # Need k8s config
-        config.load_incluster_config()
         self.batch_v1 = client.BatchV1Api()
         self.core_v1 = client.CoreV1Api()
         self.pod_name = None
+        if not kwargs.get('no_create', False):
+            self.create()
 
     def _get_current_namespace(self):
         """Get the name of the current namespace or project"""
