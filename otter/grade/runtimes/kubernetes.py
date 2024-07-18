@@ -32,8 +32,6 @@ class KubernetesRuntime(BaseRuntime):
             'OTTERGRADER_REPO_NAME',
             'containers.renci.org/helxplatform/ottergrader')
         self.image_spec = self.repo + "/" + self.image
-        self.batch_v1 = client.BatchV1Api()
-        self.core_v1 = client.CoreV1Api()
         self.pod_name = None
         if not kwargs.get('no_create', False):
             self.create()
@@ -145,10 +143,11 @@ class KubernetesRuntime(BaseRuntime):
     def create(self, **kwargs):
         """Create the container"""
         LOGGER.info(f"Creating job")
-
+        batch_v1 = client.BatchV1Api()
+        core_v1 = client.CoreV1Api()
         job = self._create_jobspec()
         # batch_v1 = client.BatchV1Api()
-        created_job = self.batch_v1.create_namespaced_job(
+        created_job = batch_v1.create_namespaced_job(
             body=job,
             namespace=self.namespace
         )
@@ -158,7 +157,7 @@ class KubernetesRuntime(BaseRuntime):
         while not self.pod_name:
             try:
                 # Get Pod associated with the Job
-                pods = self.core_v1.list_namespaced_pod(namespace=self.namespace, label_selector=f"job-name={created_job.metadata.name}")
+                pods = core_v1.list_namespaced_pod(namespace=self.namespace, label_selector=f"job-name={created_job.metadata.name}")
                 if pods.items:
                     self.pod_name = pods.items[0].metadata.name
             except Exception as e:
@@ -176,12 +175,13 @@ class KubernetesRuntime(BaseRuntime):
     @property
     def job(self):
         """Return the job APIObject"""
+        batch_v1 = client.BatchV1Api()
         if not self.pod_name:
             return None  # Handle case where pod_name is not set yet
 
         try:
             # Retrieve the Job object by name
-            job_obj = self.batch_v1.read_namespaced_job(namespace=self.namespace, name=self.pod_name)
+            job_obj = batch_v1.read_namespaced_job(namespace=self.namespace, name=self.pod_name)
             return job_obj
         except Exception as e:
             print(f"Error occurred while fetching Job: {e}")
@@ -224,8 +224,9 @@ class KubernetesRuntime(BaseRuntime):
             return None  # Handle case where pod_name is not set yet
 
         try:
+            core_v1 = client.CoreV1Api()
             # Retrieve the Pod object by name
-            pod_obj = self.core_v1.read_namespaced_pod(namespace=self.namespace, name=self.pod_name)
+            pod_obj = core_v1.read_namespaced_pod(namespace=self.namespace, name=self.pod_name)
             return pod_obj.metadata.uid
         except Exception as e:
             print(f"Error occurred while fetching Pod: {e}")
@@ -247,6 +248,8 @@ def finalize(self):
             return
 
         try:
+            batch_v1 = client.BatchV1Api()
+            core_v1 = client.CoreV1Api()
             # Copy files from Pod to local paths
             for local_path, container_path in self.volumes:
                 command = ["kubectl", "cp", f"{self.pod_name}:{container_path}", local_path]
@@ -254,7 +257,7 @@ def finalize(self):
 
             # Delete Job if no_kill is not set
             if not self.no_kill:
-                self.batch_v1.delete_namespaced_job(namespace=self.namespace, name=self.pod_name, body=client.V1DeleteOptions())
+                batch_v1.delete_namespaced_job(namespace=self.namespace, name=self.pod_name, body=client.V1DeleteOptions())
 
         except Exception as e:
             print(f"Error occurred during finalize operation: {e}")
