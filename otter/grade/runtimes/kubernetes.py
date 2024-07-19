@@ -226,16 +226,16 @@ class KubernetesRuntime(BaseRuntime):
                 break
 
 
-    def _get_active_container(self):
-        """Return the name of a running container
-        """
-        for cs in self.pod.model['status']['containerStatuses']:
-            if 'running' in cs['state']:
-                return cs['name']
-        for ics in self.pod.model['status']['initContainerStatuses']:
-            if 'running' in ics['state']:
-                return ics['name']
-        return None
+    # def _get_active_container(self):
+    #     """Return the name of a running container
+    #     """
+    #     for cs in self.pod.model['status']['containerStatuses']:
+    #         if 'running' in cs['state']:
+    #             return cs['name']
+    #     for ics in self.pod.model['status']['initContainerStatuses']:
+    #         if 'running' in ics['state']:
+    #             return ics['name']
+    #     return None
 
     def kill(self):
         """Kill the container by deleting the Job"""
@@ -268,6 +268,23 @@ class KubernetesRuntime(BaseRuntime):
             LOGGER.error(f"Error occurred while fetching Pod: {e}")
             return None
 
+    def get_logs(self):
+        """Retrieve logs from all containers in the Pod"""
+        config.load_incluster_config()
+        core_v1 = client.CoreV1Api()
+
+        try:
+            # Fetch logs from all containers in the Pod
+            logs = core_v1.read_namespaced_pod_log(
+                namespace="eduhelx-prof-staging",
+                name=self.pod_name,
+                container=self.pod_name,
+                tail_lines=100 
+            )
+            return logs
+        except Exception as e:
+            LOGGER.error(f"Error occurred while fetching logs for Pod {self.pod_name}: {e}")
+            return None
 
     # use if kubectl doesn't work directly
     def copy_files_between_pods(source_pod_name, source_container_name, source_path, destination_pod_name, destination_container_name, destination_path):
