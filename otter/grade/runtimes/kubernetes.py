@@ -6,6 +6,7 @@ from time import sleep
 import subprocess
 
 from kubernetes import client, config
+from kubernetes.client.rest import ApiException
 
 from ._base import BaseRuntime
 from ..utils import OTTER_DOCKER_IMAGE_NAME
@@ -242,7 +243,28 @@ class KubernetesRuntime(BaseRuntime):
     #     logdict = self.pod.logs()
     #     return list(logdict.values())[0]
 
-def finalize(self):
+    # use if kubectl doesn't work directly
+    def copy_files_between_pods(source_pod_name, source_container_name, source_path, destination_pod_name, destination_container_name, destination_path):
+        # Load Kubernetes configuration
+        config.load_incluster_config()
+        api_instance = client.CoreV1Api()
+
+        try:
+            # Copy files from source pod
+            resp = api_instance.connect_get_namespaced_pod_exec(
+                name=source_pod_name,
+                namespace="eduhelx-prof-staging",
+                command=['/bin/sh', '-c', f'kubectl cp {source_pod_name}:{source_path} {destination_pod_name}:{destination_path}'],
+                container=source_container_name,
+                stderr=True, stdin=True,
+                stdout=True, tty=False
+            )
+            print("File copied successfully")
+            print(resp)
+        except ApiException as e:
+            print("Exception when calling CoreV1Api->connect_get_namespaced_pod_exec: %s\n" % e)
+
+    def finalize(self):
         """Final cleanup and writeout
 
         Should copy files back to the local paths and remove container if
