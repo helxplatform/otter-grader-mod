@@ -189,21 +189,41 @@ class KubernetesRuntime(BaseRuntime):
             job_obj = batch_v1.read_namespaced_job(namespace="eduhelx-prof-staging", name=self.pod_name)
             return job_obj
         except Exception as e:
-            print(f"Error occurred while fetching Job: {e}")
+            LOGGER.error(f"Error occurred while fetching Job: {e}")
             return None
 
 
-    # def wait(self): 
-    #     """Wait the container completion"""
-    #     while True:
-    #         conditions = self.job.model['status']['conditions']
-    #         statuses = [c['type'] for c in conditions]
-    #         if 'Failed' in statuses:
-    #             # Maybe we should log something? Dunno...
-    #             break
-    #         if 'Complete' in statuses:
-    #             break
-    #         sleep(4)
+    def wait(self): 
+        """Wait for the container to complete"""
+        config.load_incluster_config()
+        batch_v1 = client.BatchV1Api()
+
+        while True:
+            try:
+                # Fetch the Job object associated with self.pod_name
+                job_obj = batch_v1.read_namespaced_job(namespace="eduhelx-prof-staging", name=self.pod_name)
+                conditions = job_obj.status.conditions
+                
+                if not conditions:
+                    sleep(5)  # Wait a bit before checking again
+                    continue
+                
+                statuses = [c.type for c in conditions]
+                
+                if 'Failed' in statuses:
+                    LOGGER.error(f"Job {self.pod_name} has failed.")
+                    break
+                elif 'Complete' in statuses:
+                    LOGGER.info(f"Job {self.pod_name} has completed successfully.")
+                    break
+                else:
+                    LOGGER.info(f"Job {self.pod_name} is still running. Status: {statuses}")
+                
+                sleep(10)  # Adjust the sleep interval as needed
+
+            except Exception as e:
+                LOGGER.error(f"Error occurred while waiting for Job {self.pod_name}: {e}")
+                break
 
 
     def _get_active_container(self):
@@ -217,11 +237,21 @@ class KubernetesRuntime(BaseRuntime):
                 return ics['name']
         return None
 
-    # def kill(self):
-    #     """Kill the container"""
-    #     active = self._get_active_container()
-    #     if active:
-    #         self.pod.execute(['kill', '-9', '1'], container_name=active)
+    def kill(self):
+        """Kill the container by deleting the Job"""
+        config.load_incluster_config()
+        batch_v1 = client.BatchV1Api()
+
+        try:
+            # Delete the Job associated with self.pod_name
+            batch_v1.delete_namespaced_job(
+                namespace="eduhelx-prof-staging",
+                name=self.pod_name,
+                body=client.V1DeleteOptions()
+            )
+            LOGGER.info(f"Job {self.pod_name} has been deleted.")
+        except Exception as e:
+            LOGGER.error(f"Error occurred while deleting Job {self.pod_name}: {e}")
 
     def get_container_id(self):
         """Returns the Pod UID"""
@@ -235,13 +265,9 @@ class KubernetesRuntime(BaseRuntime):
             pod_obj = core_v1.read_namespaced_pod(namespace="eduhelx-prof-staging", name=self.pod_name)
             return pod_obj.metadata.uid
         except Exception as e:
-            print(f"Error occurred while fetching Pod: {e}")
+            LOGGER.error(f"Error occurred while fetching Pod: {e}")
             return None
 
-    # def get_logs(self):
-    #     """Returns the logs for the container"""
-    #     logdict = self.pod.logs()
-    #     return list(logdict.values())[0]
 
     # use if kubectl doesn't work directly
     def copy_files_between_pods(source_pod_name, source_container_name, source_path, destination_pod_name, destination_container_name, destination_path):
@@ -259,10 +285,10 @@ class KubernetesRuntime(BaseRuntime):
                 stderr=True, stdin=True,
                 stdout=True, tty=False
             )
-            print("File copied successfully")
-            print(resp)
+            LOGGER.info("File copied successfully")
+            LOGGER.info(resp)
         except ApiException as e:
-            print("Exception when calling CoreV1Api->connect_get_namespaced_pod_exec: %s\n" % e)
+            LOGGER.error("Exception when calling CoreV1Api->connect_get_namespaced_pod_exec: %s\n" % e)
 
     def finalize(self):
         """Final cleanup and writeout
@@ -271,7 +297,7 @@ class KubernetesRuntime(BaseRuntime):
         no_kill not set
         """
         if not self.pod_name:
-            print("Pod name is not set. Finalize operation cannot proceed.")
+            LOGGER.info("Pod name is not set. Finalize operation cannot proceed.")
             return
 
         try:
@@ -288,6 +314,6 @@ class KubernetesRuntime(BaseRuntime):
                 batch_v1.delete_namespaced_job(namespace="eduhelx-prof-staging", name=self.pod_name, body=client.V1DeleteOptions())
 
         except Exception as e:
-            print(f"Error occurred during finalize operation: {e}")
+            LOGGER.error(f"Error occurred during finalize operation: {e}")
 
 runtime_class = KubernetesRuntime
