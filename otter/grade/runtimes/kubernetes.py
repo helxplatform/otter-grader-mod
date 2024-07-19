@@ -205,7 +205,7 @@ class KubernetesRuntime(BaseRuntime):
                 conditions = job_obj.status.conditions
                 
                 if not conditions:
-                    sleep(5)  # Wait a bit before checking again
+                    sleep(30)  # Wait a bit before checking again
                     continue
                 
                 statuses = [c.type for c in conditions]
