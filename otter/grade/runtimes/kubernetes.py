@@ -143,6 +143,7 @@ class KubernetesRuntime(BaseRuntime):
     def create(self, **kwargs):
         """Create the container"""
         LOGGER.info(f"Creating job")
+        config.load_incluster_config()
         batch_v1 = client.BatchV1Api()
         core_v1 = client.CoreV1Api()
         job = self._create_jobspec()
@@ -175,6 +176,7 @@ class KubernetesRuntime(BaseRuntime):
     @property
     def job(self):
         """Return the job APIObject"""
+        config.load_incluster_config()
         batch_v1 = client.BatchV1Api()
         if not self.pod_name:
             return None  # Handle case where pod_name is not set yet
@@ -224,6 +226,7 @@ class KubernetesRuntime(BaseRuntime):
             return None  # Handle case where pod_name is not set yet
 
         try:
+            config.load_incluster_config()
             core_v1 = client.CoreV1Api()
             # Retrieve the Pod object by name
             pod_obj = core_v1.read_namespaced_pod(namespace=self.namespace, name=self.pod_name)
@@ -248,6 +251,7 @@ def finalize(self):
             return
 
         try:
+            config.load_incluster_config()
             batch_v1 = client.BatchV1Api()
             core_v1 = client.CoreV1Api()
             # Copy files from Pod to local paths
