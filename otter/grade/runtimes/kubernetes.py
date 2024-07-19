@@ -323,7 +323,7 @@ class KubernetesRuntime(BaseRuntime):
             core_v1 = client.CoreV1Api()
             # Copy files from Pod to local paths
             for local_path, container_path in self.volumes:
-                command = ["kubectl", "cp", f"{self.pod_name}:{container_path}", local_path]
+                command = ["oc", "cp", f"{self.pod_name}:{container_path}", local_path]
                 subprocess.run(command, check=True)
 
             # Delete Job if no_kill is not set
