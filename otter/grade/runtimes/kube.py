@@ -75,14 +75,13 @@ class KubernetesRuntime(BaseRuntime):
         """Configure Pod template container
         """
         env = self._get_env()
-
+        # command=["sh", "-c", 'until [ -f /tmp/.ottergrader_ready ]; do echo "waiting ready file"; sleep 2; done;'],
         # Define init containers
         init_containers = [
             client.V1Container(
                 name="init-filewait",
                 image="busybox:latest",
-                command = ["sh", "-c", 'echo "Init container started - waiting on build"; sleep 20'], # sleep 300
-                # command=["sh", "-c", 'until [ -f /tmp/.ottergrader_ready ]; do echo "waiting ready file"; sleep 2; done;'],
+                command = ["sh", "-c", 'echo "Init container started - waiting on build"; sleep 20'], 
                 env=env,
                 volume_mounts=[
                     client.V1VolumeMount(mount_path="/autograder/submission", name="submission-volume")
@@ -93,12 +92,11 @@ class KubernetesRuntime(BaseRuntime):
                 )
             )
         ]
-
         # Define containers
+        # image=self.image_spec,
         containers = [
             client.V1Container(
                 name=OTTER_DOCKER_IMAGE_NAME,
-                # image=self.image_spec,
                 image="containers.renci.org/helxplatform/ottergrader/otter-grade:414e8c6",
                 env=env,
                 volume_mounts=[
@@ -110,14 +108,12 @@ class KubernetesRuntime(BaseRuntime):
                 )
             )
         ]
-
         volumes = [
             client.V1Volume(
                 name="submission-volume",
                 empty_dir=client.V1EmptyDirVolumeSource(size_limit="100Mi")
             )
         ]
-
         # Define Pod template spec
         pod_template_spec = client.V1PodTemplateSpec(
             spec=client.V1PodSpec(
@@ -127,14 +123,12 @@ class KubernetesRuntime(BaseRuntime):
                 restart_policy="Never"
             )
         )
-
         # Define Job spec
         job_spec = client.V1JobSpec(
             active_deadline_seconds=3600,
             backoff_limit=1,
             template=pod_template_spec
         )
-
         # Define Job object
         job = client.V1Job(
             api_version="batch/v1",
@@ -142,18 +136,17 @@ class KubernetesRuntime(BaseRuntime):
             metadata=client.V1ObjectMeta(generate_name="otter-grade-submission-"),
             spec=job_spec
         )
-
         return job
 
     def create(self, **kwargs):
         """Create the container"""
+        LOGGER.info(f"Sanity Check log")
         job = self._create_jobspec()
         created_job = self.batch_v1.create_namespaced_job(
             body=job,
             namespace=self.namespace
         )
-        self.wait()
-        LOGGER.info(f"Called wait, moving on")
+        LOGGER.info(f"Sanity Check log 2")
         # Wait for Pod to be created
         while not self.pod_name:
             try:
@@ -165,7 +158,7 @@ class KubernetesRuntime(BaseRuntime):
                 LOGGER.error(f"Error occurred while fetching Pod: {e}")
 
             if not self.pod_name:
-                sleep(1)  # Wait for 1 second before retrying
+                sleep(1)
         LOGGER.info(f"Pod has been created {self.pod_name}")
         # call wait in order to ensure job/pods are launched
         
