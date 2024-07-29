@@ -23,7 +23,7 @@ class KubernetesRuntime(BaseRuntime):
         """
 
         super().__init__(*args, no_create=True, **kwargs)
-        config.load_incluster_config()
+        self.config = config.load_incluster_config()
         self.api_instance = client.CoreV1Api()
         self.batch_v1 = client.BatchV1Api()
         self.core_v1 = client.CoreV1Api()
@@ -140,13 +140,11 @@ class KubernetesRuntime(BaseRuntime):
 
     def create(self, **kwargs):
         """Create the container"""
-        LOGGER.info(f"Sanity Check log")
         job = self._create_jobspec()
         created_job = self.batch_v1.create_namespaced_job(
             body=job,
             namespace=self.namespace
         )
-        LOGGER.info(f"Sanity Check log 2")
         # Wait for Pod to be created
         while not self.pod_name:
             try:
