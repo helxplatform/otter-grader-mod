@@ -152,6 +152,8 @@ class KubernetesRuntime(BaseRuntime):
             body=job,
             namespace=self.namespace
         )
+        self.wait()
+        LOGGER.info(f"Called wait, moving on")
         # Wait for Pod to be created
         while not self.pod_name:
             try:
@@ -166,7 +168,6 @@ class KubernetesRuntime(BaseRuntime):
                 sleep(1)  # Wait for 1 second before retrying
         LOGGER.info(f"Pod has been created {self.pod_name}")
         # call wait in order to ensure job/pods are launched
-        self.wait()
         
 
     @property
@@ -192,9 +193,6 @@ class KubernetesRuntime(BaseRuntime):
 
     def wait(self): 
         """Wait for the container to complete"""
-        # config.load_incluster_config()
-        # batch_v1 = client.BatchV1Api()
-
         while True:
             try:
                 # Fetch the Job object associated with self.pod_name
@@ -221,23 +219,8 @@ class KubernetesRuntime(BaseRuntime):
                 LOGGER.error(f"Error occurred while waiting for Job {self.pod_name}: {e}")
                 break
 
-
-    # def _get_active_container(self):
-    #     """Return the name of a running container
-    #     """
-    #     for cs in self.pod.model['status']['containerStatuses']:
-    #         if 'running' in cs['state']:
-    #             return cs['name']
-    #     for ics in self.pod.model['status']['initContainerStatuses']:
-    #         if 'running' in ics['state']:
-    #             return ics['name']
-    #     return None
-
     def kill(self):
         """Kill the container by deleting the Job"""
-        # config.load_incluster_config()
-        # batch_v1 = client.BatchV1Api()
-
         try:
             # Delete the Job associated with self.pod_name
             self.batch_v1.delete_namespaced_job(
@@ -253,11 +236,7 @@ class KubernetesRuntime(BaseRuntime):
         """Returns the Pod UID"""
         if not self.pod_name:
             return None  # Handle case where pod_name is not set yet
-
         try:
-            # config.load_incluster_config()
-            # core_v1 = client.CoreV1Api()
-            # Retrieve the Pod object by name
             pod_obj = self.core_v1.read_namespaced_pod(namespace=self.namespace, name=self.pod_name)
             return pod_obj.metadata.uid
         except Exception as e:
@@ -266,9 +245,6 @@ class KubernetesRuntime(BaseRuntime):
 
     def get_logs(self):
         """Retrieve logs from all containers in the Pod"""
-        # config.load_incluster_config()
-        # core_v1 = client.CoreV1Api()
-
         try:
             # Fetch logs from all containers in the Pod
             logs = self.core_v1.read_namespaced_pod_log(
@@ -284,10 +260,6 @@ class KubernetesRuntime(BaseRuntime):
 
     # use if kubectl doesn't work directly
     def copy_files_between_pods(self, source_pod_name, source_container_name, source_path, destination_pod_name, destination_container_name, destination_path):
-        # Load Kubernetes configuration
-        # config.load_incluster_config()
-        # api_instance = client.CoreV1Api()
-
         try:
             # Copy files from source pod
             resp = self.api_instance.connect_get_namespaced_pod_exec(
@@ -314,10 +286,6 @@ class KubernetesRuntime(BaseRuntime):
             return
 
         try:
-            # config.load_incluster_config()
-            # batch_v1 = client.BatchV1Api()
-            # core_v1 = client.CoreV1Api()
-            # Copy files from Pod to local paths
             for local_path, container_path in self.volumes:
                 command = ["oc", "cp", f"{self.pod_name}:{container_path}", local_path]
                 subprocess.run(command, check=True)
