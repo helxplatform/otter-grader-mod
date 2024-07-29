@@ -99,7 +99,7 @@ class KubernetesRuntime(BaseRuntime):
             client.V1Container(
                 name=OTTER_DOCKER_IMAGE_NAME,
                 # image=self.image_spec,
-                image="containers.renci.org/helxplatform/ottergrader/otter-grade:6bf28b1",
+                image="containers.renci.org/helxplatform/ottergrader/otter-grade:414e8c6",
                 env=env,
                 volume_mounts=[
                     client.V1VolumeMount(mount_path="/autograder/submission", name="submission-volume")
