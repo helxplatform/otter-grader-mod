@@ -5,7 +5,7 @@ import os
 from time import sleep
 import subprocess
 
-from kubernetes import client, config
+from kubernetes import client, config, watch
 from kubernetes.client.rest import ApiException
 
 from ._base import BaseRuntime
@@ -29,9 +29,7 @@ class KubernetesRuntime(BaseRuntime):
         self.core_v1 = client.CoreV1Api()
         self.secret_name = kwargs.get('secret_name',
                                       'harbor')
-        # self.namespace = kwargs.get('namespace', None)
-        # if not self.namespace:
-        self.namespace = self._get_current_namespace # doesn't seem to work 
+        self.namespace = self._get_current_namespace
         self.repo = os.environ.get(
             'OTTERGRADER_REPO_NAME',
             'containers.renci.org/helxplatform/ottergrader')
@@ -47,8 +45,8 @@ class KubernetesRuntime(BaseRuntime):
                 for line in secrets:
                     namespace = line
         LOGGER.info(f"checking downwardapi for namespace: {line}")
-        # return namespace
-        return 'eduhelx-prof-staging'
+        return namespace
+        # return 'eduhelx-prof-staging'
 
     def _get_env(self):
         """Put any needed environment variables into the env
@@ -158,15 +156,15 @@ class KubernetesRuntime(BaseRuntime):
         # batch_v1 = client.BatchV1Api()
         created_job = self.batch_v1.create_namespaced_job(
             body=job,
-            namespace="eduhelx-prof-staging"
+            namespace=self.namespace
         )
         LOGGER.info(f"Job created. status='{str(created_job.status)}'")
-
+        
         # Wait for Pod to be created
         while not self.pod_name:
             try:
                 # Get Pod associated with the Job
-                pods = self.core_v1.list_namespaced_pod(namespace="eduhelx-prof-staging", label_selector=f"job-name={created_job.metadata.name}")
+                pods = self.core_v1.list_namespaced_pod(namespace=self.namespace, label_selector=f"job-name={created_job.metadata.name}")
                 if pods.items:
                     self.pod_name = pods.items[0].metadata.name
             except Exception as e:
@@ -191,7 +189,7 @@ class KubernetesRuntime(BaseRuntime):
 
         try:
             # Retrieve the Job object by name
-            job_obj = self.batch_v1.read_namespaced_job(namespace="eduhelx-prof-staging", name=self.pod_name)
+            job_obj = self.batch_v1.read_namespaced_job(namespace=self.namespace, name=self.pod_name)
             return job_obj
         except Exception as e:
             LOGGER.error(f"Error occurred while fetching Job: {e}")
@@ -206,7 +204,7 @@ class KubernetesRuntime(BaseRuntime):
         while True:
             try:
                 # Fetch the Job object associated with self.pod_name
-                job_obj = self.batch_v1.read_namespaced_job(namespace="eduhelx-prof-staging", name=self.pod_name)
+                job_obj = self.batch_v1.read_namespaced_job(namespace=self.namespace, name=self.pod_name)
                 conditions = job_obj.status.conditions
                 
                 if not conditions:
@@ -250,7 +248,7 @@ class KubernetesRuntime(BaseRuntime):
         try:
             # Delete the Job associated with self.pod_name
             self.batch_v1.delete_namespaced_job(
-                namespace="eduhelx-prof-staging",
+                namespace=self.namespace,
                 name=self.pod_name,
                 body=client.V1DeleteOptions()
             )
@@ -267,7 +265,7 @@ class KubernetesRuntime(BaseRuntime):
             # config.load_incluster_config()
             # core_v1 = client.CoreV1Api()
             # Retrieve the Pod object by name
-            pod_obj = self.core_v1.read_namespaced_pod(namespace="eduhelx-prof-staging", name=self.pod_name)
+            pod_obj = self.core_v1.read_namespaced_pod(namespace=self.namespace, name=self.pod_name)
             return pod_obj.metadata.uid
         except Exception as e:
             LOGGER.error(f"Error occurred while fetching Pod: {e}")
@@ -281,7 +279,7 @@ class KubernetesRuntime(BaseRuntime):
         try:
             # Fetch logs from all containers in the Pod
             logs = self.core_v1.read_namespaced_pod_log(
-                namespace="eduhelx-prof-staging",
+                namespace=self.namespace,
                 name=self.pod_name,
                 container=self.pod_name,
                 tail_lines=100 
@@ -301,7 +299,7 @@ class KubernetesRuntime(BaseRuntime):
             # Copy files from source pod
             resp = self.api_instance.connect_get_namespaced_pod_exec(
                 name=source_pod_name,
-                namespace="eduhelx-prof-staging",
+                namespace=self.namespace,
                 command=['/bin/sh', '-c', f'kubectl cp {source_pod_name}:{source_path} {destination_pod_name}:{destination_path}'],
                 container=source_container_name,
                 stderr=True, stdin=True,
@@ -333,7 +331,7 @@ class KubernetesRuntime(BaseRuntime):
 
             # Delete Job if no_kill is not set
             if not self.no_kill:
-                self.batch_v1.delete_namespaced_job(namespace="eduhelx-prof-staging", name=self.pod_name, body=client.V1DeleteOptions())
+                self.batch_v1.delete_namespaced_job(namespace=self.namespace, name=self.pod_name, body=client.V1DeleteOptions())
 
         except Exception as e:
             LOGGER.error(f"Error occurred during finalize operation: {e}")
