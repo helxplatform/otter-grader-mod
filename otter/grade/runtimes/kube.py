@@ -46,7 +46,6 @@ class KubernetesRuntime(BaseRuntime):
                     namespace = line
         LOGGER.info(f"checking downwardapi for namespace: {line}")
         return namespace
-        # return 'eduhelx-prof-staging'
 
     def _get_env(self):
         """Put any needed environment variables into the env
@@ -148,18 +147,11 @@ class KubernetesRuntime(BaseRuntime):
 
     def create(self, **kwargs):
         """Create the container"""
-        LOGGER.info(f"Creating job")
-        # config.load_incluster_config()
-        # batch_v1 = client.BatchV1Api()
-        # core_v1 = client.CoreV1Api()
         job = self._create_jobspec()
-        # batch_v1 = client.BatchV1Api()
         created_job = self.batch_v1.create_namespaced_job(
             body=job,
             namespace=self.namespace
         )
-        LOGGER.info(f"Job created. status='{str(created_job.status)}'")
-        
         # Wait for Pod to be created
         while not self.pod_name:
             try:
@@ -173,6 +165,8 @@ class KubernetesRuntime(BaseRuntime):
             if not self.pod_name:
                 sleep(1)  # Wait for 1 second before retrying
         LOGGER.info(f"Pod has been created {self.pod_name}")
+        # call wait in order to ensure job/pods are launched
+        self.wait()
         
 
     @property
@@ -208,7 +202,7 @@ class KubernetesRuntime(BaseRuntime):
                 conditions = job_obj.status.conditions
                 
                 if not conditions:
-                    sleep(30)  # Wait a bit before checking again
+                    sleep(10)  # Wait a bit before checking again
                     continue
                 
                 statuses = [c.type for c in conditions]
@@ -222,8 +216,7 @@ class KubernetesRuntime(BaseRuntime):
                 else:
                     LOGGER.info(f"Job {self.pod_name} is still running. Status: {statuses}")
                 
-                sleep(10)  # Adjust the sleep interval as needed
-
+                sleep(10)
             except Exception as e:
                 LOGGER.error(f"Error occurred while waiting for Job {self.pod_name}: {e}")
                 break
