@@ -23,9 +23,9 @@ class KubeRuntime(BaseRuntime):
         """
 
         super().__init__(*args, no_create=True, **kwargs)
-        # self.config = config.load_incluster_config()
+        self.config = config.load_incluster_config()
         # self.api_instance = client.CoreV1Api()
-        # self.batch_v1 = client.BatchV1Api()
+        self.batch_v1 = client.BatchV1Api()
         # self.core_v1 = client.CoreV1Api()
         self.secret_name = kwargs.get('secret_name',
                                       'harbor')
@@ -141,11 +141,11 @@ class KubeRuntime(BaseRuntime):
 
     def create(self, **kwargs):
         """Create the container"""
-        config.load_incluster_config()
+        # config.load_incluster_config()
         core_v1 = client.CoreV1Api()
         batch_v1 = client.BatchV1Api()
         job = self._create_jobspec()
-        created_job = batch_v1.create_namespaced_job(
+        created_job = self.batch_v1.create_namespaced_job(
             body=job,
             namespace=self.namespace
         )
