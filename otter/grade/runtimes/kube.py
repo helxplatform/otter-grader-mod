@@ -29,7 +29,8 @@ class KubeRuntime(BaseRuntime):
         # self.core_v1 = client.CoreV1Api()
         self.secret_name = kwargs.get('secret_name',
                                       'harbor')
-        self.namespace = self._get_current_namespace
+        self.namespace = "eduhelx-prof-staging"
+        # self.namespace = self._get_current_namespace
         self.repo = os.environ.get(
             'OTTERGRADER_REPO_NAME',
             'containers.renci.org/helxplatform/ottergrader')
