@@ -23,10 +23,10 @@ class KubeRuntime(BaseRuntime):
         """
 
         super().__init__(*args, no_create=True, **kwargs)
-        self.config = config.load_incluster_config()
-        self.api_instance = client.CoreV1Api()
-        self.batch_v1 = client.BatchV1Api()
-        self.core_v1 = client.CoreV1Api()
+        # self.config = config.load_incluster_config()
+        # self.api_instance = client.CoreV1Api()
+        # self.batch_v1 = client.BatchV1Api()
+        # self.core_v1 = client.CoreV1Api()
         self.secret_name = kwargs.get('secret_name',
                                       'harbor')
         self.namespace = self._get_current_namespace
