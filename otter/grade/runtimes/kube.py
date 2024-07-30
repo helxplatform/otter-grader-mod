@@ -147,7 +147,7 @@ class KubeRuntime(BaseRuntime):
             body=job,
             namespace=self.namespace
         )
-        self.job_name = created_job
+        self.job_name = job.metadata.name
         # Wait for Pod to be created
         while not self.pod_name:
             try:
