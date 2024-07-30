@@ -14,7 +14,7 @@ from ...utils import loggers
 
 LOGGER = loggers.get_logger(__name__)
 
-class KubernetesRuntime(BaseRuntime):
+class KubeRuntime(BaseRuntime):
     """Class for executing grader in Openshift containers
     """
 
@@ -288,4 +288,4 @@ class KubernetesRuntime(BaseRuntime):
         except Exception as e:
             LOGGER.error(f"Error occurred during finalize operation: {e}")
 
-runtime_class = KubernetesRuntime
+runtime_class = KubeRuntime
