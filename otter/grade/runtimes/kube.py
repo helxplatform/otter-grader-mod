@@ -97,7 +97,7 @@ class KubeRuntime(BaseRuntime):
         containers = [
             client.V1Container(
                 name=OTTER_DOCKER_IMAGE_NAME,
-                image="containers.renci.org/helxplatform/ottergrader/otter-grade:414e8c6",
+                image="containers.renci.org/helxplatform/ottergrader/otter-grade:d42c6de",
                 env=env,
                 volume_mounts=[
                     client.V1VolumeMount(mount_path="/autograder/submission", name="submission-volume")
@@ -140,8 +140,11 @@ class KubeRuntime(BaseRuntime):
 
     def create(self, **kwargs):
         """Create the container"""
+        config.load_incluster_config()
+        core_v1 = client.CoreV1Api()
+        batch_v1 = client.BatchV1Api()
         job = self._create_jobspec()
-        created_job = self.batch_v1.create_namespaced_job(
+        created_job = batch_v1.create_namespaced_job(
             body=job,
             namespace=self.namespace
         )
@@ -149,7 +152,7 @@ class KubeRuntime(BaseRuntime):
         while not self.pod_name:
             try:
                 # Get Pod associated with the Job
-                pods = self.core_v1.list_namespaced_pod(namespace=self.namespace, label_selector=f"job-name={created_job.metadata.name}")
+                pods = core_v1.list_namespaced_pod(namespace=self.namespace, label_selector=f"job-name={created_job.metadata.name}")
                 if pods.items:
                     self.pod_name = pods.items[0].metadata.name
             except Exception as e:
@@ -168,14 +171,14 @@ class KubeRuntime(BaseRuntime):
     @property
     def job(self):
         """Return the job APIObject"""
-        # config.load_incluster_config()
-        # batch_v1 = client.BatchV1Api()
+        config.load_incluster_config()
+        batch_v1 = client.BatchV1Api()
         if not self.pod_name:
             return None  # Handle case where pod_name is not set yet
 
         try:
             # Retrieve the Job object by name
-            job_obj = self.batch_v1.read_namespaced_job(namespace=self.namespace, name=self.pod_name)
+            job_obj = batch_v1.read_namespaced_job(namespace=self.namespace, name=self.pod_name)
             return job_obj
         except Exception as e:
             LOGGER.error(f"Error occurred while fetching Job: {e}")
@@ -184,10 +187,12 @@ class KubeRuntime(BaseRuntime):
 
     def wait(self): 
         """Wait for the container to complete"""
+        config.load_incluster_config()
+        batch_v1 = client.BatchV1Api()
         while True:
             try:
                 # Fetch the Job object associated with self.pod_name
-                job_obj = self.batch_v1.read_namespaced_job(namespace=self.namespace, name=self.pod_name)
+                job_obj = batch_v1.read_namespaced_job(namespace=self.namespace, name=self.pod_name)
                 conditions = job_obj.status.conditions
                 
                 if not conditions:
@@ -212,9 +217,11 @@ class KubeRuntime(BaseRuntime):
 
     def kill(self):
         """Kill the container by deleting the Job"""
+        config.load_incluster_config()
+        batch_v1 = client.BatchV1Api()
         try:
             # Delete the Job associated with self.pod_name
-            self.batch_v1.delete_namespaced_job(
+            batch_v1.delete_namespaced_job(
                 namespace=self.namespace,
                 name=self.pod_name,
                 body=client.V1DeleteOptions()
@@ -225,10 +232,12 @@ class KubeRuntime(BaseRuntime):
 
     def get_container_id(self):
         """Returns the Pod UID"""
+        config.load_incluster_config()
+        core_v1 = client.CoreV1Api()
         if not self.pod_name:
             return None  # Handle case where pod_name is not set yet
         try:
-            pod_obj = self.core_v1.read_namespaced_pod(namespace=self.namespace, name=self.pod_name)
+            pod_obj = core_v1.read_namespaced_pod(namespace=self.namespace, name=self.pod_name)
             return pod_obj.metadata.uid
         except Exception as e:
             LOGGER.error(f"Error occurred while fetching Pod: {e}")
@@ -236,9 +245,11 @@ class KubeRuntime(BaseRuntime):
 
     def get_logs(self):
         """Retrieve logs from all containers in the Pod"""
+        config.load_incluster_config()
+        core_v1 = client.CoreV1Api()
         try:
             # Fetch logs from all containers in the Pod
-            logs = self.core_v1.read_namespaced_pod_log(
+            logs = core_v1.read_namespaced_pod_log(
                 namespace=self.namespace,
                 name=self.pod_name,
                 container=self.pod_name,
@@ -251,9 +262,11 @@ class KubeRuntime(BaseRuntime):
 
     # use if kubectl doesn't work directly
     def copy_files_between_pods(self, source_pod_name, source_container_name, source_path, destination_pod_name, destination_container_name, destination_path):
+        config.load_incluster_config()
+        api_instance = client.CoreV1Api()
         try:
             # Copy files from source pod
-            resp = self.api_instance.connect_get_namespaced_pod_exec(
+            resp = api_instance.connect_get_namespaced_pod_exec(
                 name=source_pod_name,
                 namespace=self.namespace,
                 command=['/bin/sh', '-c', f'kubectl cp {source_pod_name}:{source_path} {destination_pod_name}:{destination_path}'],
@@ -272,6 +285,8 @@ class KubeRuntime(BaseRuntime):
         Should copy files back to the local paths and remove container if
         no_kill not set
         """
+        config.load_incluster_config()
+        batch_v1 = client.BatchV1Api()
         if not self.pod_name:
             LOGGER.info("Pod name is not set. Finalize operation cannot proceed.")
             return
@@ -283,7 +298,7 @@ class KubeRuntime(BaseRuntime):
 
             # Delete Job if no_kill is not set
             if not self.no_kill:
-                self.batch_v1.delete_namespaced_job(namespace=self.namespace, name=self.pod_name, body=client.V1DeleteOptions())
+                batch_v1.delete_namespaced_job(namespace=self.namespace, name=self.pod_name, body=client.V1DeleteOptions())
 
         except Exception as e:
             LOGGER.error(f"Error occurred during finalize operation: {e}")
