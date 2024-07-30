@@ -198,17 +198,17 @@ class KubeRuntime(BaseRuntime):
                 statuses = [c.type for c in conditions]
                 
                 if 'Failed' in statuses:
-                    LOGGER.error(f"Job {self.pod_name} has failed.")
+                    LOGGER.error(f"Job {self.job_name} has failed.")
                     break
                 elif 'Complete' in statuses:
-                    LOGGER.info(f"Job {self.pod_name} has completed successfully.")
+                    LOGGER.info(f"Job {self.job_name} has completed successfully.")
                     break
                 else:
-                    LOGGER.info(f"Job {self.pod_name} is still running. Status: {statuses}")
+                    LOGGER.info(f"Job {self.job_name} is still running. Status: {statuses}")
                 
                 sleep(10)
             except Exception as e:
-                LOGGER.error(f"Error occurred while waiting for Job {self.pod_name}: {e}")
+                LOGGER.error(f"Error occurred while waiting for Job {self.job_name}: {e}")
                 break
 
     def kill(self):

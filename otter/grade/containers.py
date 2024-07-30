@@ -126,7 +126,7 @@ def grade_submission(
             os.environ.get('OTTER_GRADE_RUNTIME', 'docker'))
         # runtime = runtime_class(image, command=["/autograder/run_autograder"],
         #                         volumes=volumes, no_kill=no_kill, **args)
-        runtime = runtime_class(image, command=["sleep 500"],
+        runtime = runtime_class(image, command=["tail", "-f", "dev/null"],
                                 volumes=volumes, no_kill=no_kill, **args)
 
         # Watches for timeout
