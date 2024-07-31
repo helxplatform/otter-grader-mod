@@ -239,12 +239,11 @@ class KubeRuntime(BaseRuntime):
 
     def get_logs(self):
         """Retrieve logs from all containers in the Pod"""
-        print(self.pod_name)
         try:
             # Fetch logs from all containers in the Pod
             logs = self.core_v1.read_namespaced_pod_log(
                 namespace=self.namespace,
-                name=self.pod_name,
+                name="otter-grade",
                 container=self.pod_name,
                 tail_lines=100 
             )
