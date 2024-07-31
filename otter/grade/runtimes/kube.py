@@ -147,8 +147,8 @@ class KubeRuntime(BaseRuntime):
             body=job,
             namespace=self.namespace
         )
-        jn = created_job.metadata.name
-        LOGGER.info(f"Metadata name is {jn}")
+        self.job_name = created_job.metadata.name
+        LOGGER.info(f"Metadata name is {self.job_name}")
 
         # Wait for Pod to be created
         while not self.pod_name:
