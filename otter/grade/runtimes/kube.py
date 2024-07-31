@@ -147,7 +147,18 @@ class KubeRuntime(BaseRuntime):
             body=job,
             namespace=self.namespace
         )
-        self.job_name = job.metadata.name
+        jn = job.metadata.name
+        LOGGER.info(f"Metadata name is {jn}")
+
+        for job in created_job.items:
+            labels = job.metadata.labels
+            if labels and 'job-name' in labels:
+                job_name = labels['job-name']
+                if job_name.startswith('otter-grade-submission-'):
+                    LOGGER.info(f"Found job name: {job.metadata.name}")
+                    break
+        LOGGER.info(f"Job name is {job_name}")
+        self.job_name = job_name
         # Wait for Pod to be created
         while not self.pod_name:
             try:
