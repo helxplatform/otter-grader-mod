@@ -125,7 +125,7 @@ def grade_submission(
         runtime_class = get_runtime(
             os.environ.get('OTTER_GRADE_RUNTIME', 'docker'))
         runtime = runtime_class(image, command=["/autograder/run_autograder"],
-                                volumes=volumes, no_kill=no_kill, **args)
+                                volumes=volumes, **args)
         # TO DEBUG JOB PODS
         # runtime = runtime_class(image, command=["tail", "-f", "dev/null"],
         #                         volumes=volumes, no_kill=no_kill, **args)
