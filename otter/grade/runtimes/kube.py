@@ -82,7 +82,7 @@ class KubeRuntime(BaseRuntime):
             client.V1Container(
                 name="init-filewait",
                 image="busybox:latest",
-                command = ["sh", "-c", 'echo "Init container started - waiting on build"; sleep 20'], 
+                command = ["sh", "-c", 'echo "Init container started - waiting on build"; sleep 300'], 
                 env=env,
                 volume_mounts=[
                     client.V1VolumeMount(mount_path="/autograder/submission", name="submission-volume")
@@ -98,7 +98,8 @@ class KubeRuntime(BaseRuntime):
         containers = [
             client.V1Container(
                 name=OTTER_DOCKER_IMAGE_NAME,
-                image="containers.renci.org/helxplatform/ottergrader/otter-grade:d42c6de",
+                image=self.image_spec,
+                # image="containers.renci.org/helxplatform/ottergrader/otter-grade:d42c6de",
                 command=self.command,
                 env=env,
                 volume_mounts=[
