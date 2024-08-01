@@ -114,7 +114,6 @@ class KubeRuntime(BaseRuntime):
                     limits={"cpu": "1", "ephemeral-storage": "1G", "memory": "1G"},
                     requests={"cpu": "1", "ephemeral-storage": "1G", "memory": "1G"}
                 ),
-                security_context=security_context
             )
         ]
         volumes = [
@@ -126,6 +125,7 @@ class KubeRuntime(BaseRuntime):
         # Define Pod template spec
         pod_template_spec = client.V1PodTemplateSpec(
             spec=client.V1PodSpec(
+                security_context=security_context,
                 containers=containers,
                 init_containers=init_containers,
                 volumes=volumes,
