@@ -97,8 +97,6 @@ class KubeRuntime(BaseRuntime):
             run_as_user=1000870000,  # Example UID
             run_as_group=0,          # Example GID (note: using 0 is typically discouraged for non-root users)
             fs_group=0,              # File system group ID
-            allow_privilege_escalation=False,  # Prevent privilege escalation
-            privileged=False  # Run the container in a non-privileged mode
         )
         # Define containers
         # image=self.image_spec,
